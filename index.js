@@ -26,6 +26,17 @@ async function run() {
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
+
+
+    // create bio data collection
+    const bioDataCollection = client.db("marryMatchDB").collection("biodatas");
+
+    // get member bio data
+    app.get("/premium-member", async (req, res) => {
+      const bioData = await bioDataCollection.find().toArray();
+      res.send(bioData);
+    })
+
   } finally {
     // await client.close();
   }
