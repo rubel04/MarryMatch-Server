@@ -48,10 +48,19 @@ async function run() {
       const query = { biodataId: bioId };
       const biodata = await bioDataCollection.findOne(query);
       res.send(biodata);
-    })
+    });
 
-
-
+    // get all male , female and success marriage count
+    app.get("/successCount", async (req, res) => {
+      const maleQuery = { biodataType: "Male" };
+      const femaleQuery = { biodataType: "Female" };
+      const male = await bioDataCollection.countDocuments(maleQuery);
+      const female = await bioDataCollection.countDocuments(femaleQuery);
+      // const marriage = await bioDataCollection.countDocuments(query);
+      // TODO: get original marriage count from marriage collection
+      const marriage = 12;
+      res.send({ male, female, marriage });
+    });
   } finally {
     // await client.close();
   }
