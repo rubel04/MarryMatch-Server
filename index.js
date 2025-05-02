@@ -28,6 +28,7 @@ async function run() {
 
     // create bio data collection
     const bioDataCollection = client.db("marryMatchDB").collection("biodatas");
+    const successStoryCollection = client.db("marryMatchDB").collection("successStory");
 
     // get member bio data base of age ascending
     app.get("/premium-member", async (req, res) => {
@@ -58,9 +59,14 @@ async function run() {
       const female = await bioDataCollection.countDocuments(femaleQuery);
       // const marriage = await bioDataCollection.countDocuments(query);
       // TODO: get original marriage count from marriage collection
-      const marriage = 12;
+      const marriage = 2;
       res.send({ male, female, marriage });
     });
+
+
+
+    
+
   } finally {
     // await client.close();
   }
