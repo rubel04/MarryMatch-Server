@@ -28,9 +28,11 @@ async function run() {
 
     // create bio data collection
     const bioDataCollection = client.db("marryMatchDB").collection("biodatas");
-    const successStoryCollection = client.db("marryMatchDB").collection("successStory");
+    const successStoryCollection = client
+      .db("marryMatchDB")
+      .collection("successStory");
 
-    // get member bio data base of age ascending
+    // get premium member bio data base of age ascending
     app.get("/premium-member", async (req, res) => {
       const sortByAge = req.query.sort;
       // console.log(sortByAge);
@@ -38,7 +40,13 @@ async function run() {
       if (sortByAge === "dsc") {
         sortOption = { age: -1 };
       }
-      const bioData = await bioDataCollection.find().sort(sortOption).toArray();
+      const bioData = await bioDataCollection.find().sort(sortOption).limit(6).toArray();
+      res.send(bioData);
+    });
+
+    // get all biodatas for biodatas page
+    app.get("/all-biodata", async (req, res) => {
+      const bioData = await bioDataCollection.find().toArray();
       res.send(bioData);
     });
 
@@ -63,10 +71,16 @@ async function run() {
       res.send({ male, female, marriage });
     });
 
-
-
-    
-
+    // get all success story from our success members
+    app.get("/success-story", async (req, res) => {
+      const story = await successStoryCollection
+        .find()
+        .sort({
+          marriageDate: -1,
+        })
+        .toArray();
+      res.send(story);
+    });
   } finally {
     // await client.close();
   }
