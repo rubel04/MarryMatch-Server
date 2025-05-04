@@ -58,11 +58,19 @@ async function run() {
       res.send(bioData);
     });
 
-    // get single biodata details
+    // get single biodata details by id
     app.get("/biodata/:id", async (req, res) => {
       const id = req.params.id;
       const bioId = parseInt(id);
       const query = { biodataId: bioId };
+      const biodata = await bioDataCollection.findOne(query);
+      res.send(biodata);
+    });
+
+    // view profile information by email
+    app.get("/viewBiodata", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
       const biodata = await bioDataCollection.findOne(query);
       res.send(biodata);
     });
