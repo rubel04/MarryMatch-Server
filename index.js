@@ -34,7 +34,17 @@ async function run() {
     const favoritesBioDataCollection = client
       .db("marryMatchDB")
       .collection("favoritesBiodata");
+      const userCollection = client.db("marryMatchDB").collection("users");
 
+    // get all users for only admin
+    app.get("/users", async (req, res) => {
+      const users = await userCollection.find().toArray();
+      res.send(users);
+    })
+
+
+    // make admin
+    
     // get premium member bio data base of age ascending
     app.get("/premium-member", async (req, res) => {
       const sortByAge = req.query.sort;
@@ -90,6 +100,16 @@ async function run() {
       const newFavoriteBiodata = await favoritesBioDataCollection.insertOne(biodata);
       res.send(newFavoriteBiodata)
     })
+
+
+    // delete favourite biodata
+    app.delete("/favoriteBiodata/:id", async (req, res) => {
+      const id = parseInt(req.params.id);
+      console.log(id);
+      const query = { biodataId: id };
+      const deleteBiodata = await favoritesBioDataCollection.deleteOne(query);
+      res.send(deleteBiodata);
+    });
 
     // get all male , female and success marriage count
     app.get("/successCount", async (req, res) => {
