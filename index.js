@@ -75,6 +75,14 @@ async function run() {
       res.send(biodata);
     });
 
+    // get favorite biodata for logged in user
+      app.get("/favoriteBiodata", async (req, res) => {
+        const email = req.query.email;
+        const query = { userEmail: email };
+        const biodata = await favoritesBioDataCollection.find(query).toArray()
+        res.send(biodata);
+      });
+
 
     // add biodata to the favorite collection
     app.post("/favoriteBiodata", async (req, res) => {
