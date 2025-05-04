@@ -43,10 +43,9 @@ async function run() {
     })
 
 
-    // make admin
+    // make admin 
     app.patch("/users/admin", async (req, res) => {
       const email = req.query.email;
-      // const userData = req.body;
       const filter = { userEmail: email };
       const makeAdmin = {
         $set: {
@@ -56,6 +55,20 @@ async function run() {
       const newAdmin = await userCollection.updateOne(filter, makeAdmin);
       res.send(newAdmin)
     })
+
+    // make premium
+    app.patch("/users/premium", async (req, res) => {
+      const email = req.query.email;
+      const filter = { userEmail: email };
+      const makeAdmin = {
+        $set: {
+          role: "premium",
+        },
+      };
+      const newAdmin = await userCollection.updateOne(filter, makeAdmin);
+      res.send(newAdmin);
+    });
+
     
     // get premium member bio data base of age ascending
     app.get("/premium-member", async (req, res) => {
