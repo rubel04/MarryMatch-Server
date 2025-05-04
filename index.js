@@ -38,7 +38,12 @@ async function run() {
 
     // get all users for only admin
     app.get("/users", async (req, res) => {
-      const users = await userCollection.find().toArray();
+      const search = req.query.search;
+      let query = {};
+      if (search) {
+        query = { userName: { $regex: search, $options: "i" } };
+      }
+      const users = await userCollection.find(query).toArray();
       res.send(users);
     })
 
