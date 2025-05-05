@@ -65,12 +65,24 @@ async function run() {
       const email = req.query.email;
       const query = { userEmail: email };
       const user = await userCollection.findOne(query);
-      console.log(user.role);
       let admin = false;
       if (user) {
         admin = user?.role === "admin"
       }
       res.send({admin})
+    })
+
+    // create a normal user
+    app.post("/users", async (req, res) => {
+      const userData = req.body;
+      // check user already existing or not existing
+      const query = { userEmail: userData.email };
+      const user = await userCollection.findOne(query);
+      if (user) {
+        return res.send({message: "User already exist!"})
+      }
+      const newUser = await userCollection.insertOne(userData)
+      res.send(newUser)
     })
 
     // make premium
