@@ -34,7 +34,7 @@ async function run() {
     const favoritesBioDataCollection = client
       .db("marryMatchDB")
       .collection("favoritesBiodata");
-      const userCollection = client.db("marryMatchDB").collection("users");
+    const userCollection = client.db("marryMatchDB").collection("users");
 
     // get all users for only admin and search user by username
     app.get("/users", async (req, res) => {
@@ -45,20 +45,32 @@ async function run() {
       }
       const users = await userCollection.find(query).toArray();
       res.send(users);
-    })
+    });
 
-
-    // make admin 
+    // make admin
     app.patch("/users/admin", async (req, res) => {
       const email = req.query.email;
       const filter = { userEmail: email };
       const makeAdmin = {
         $set: {
-          role: "admin"
-        }
-      }
+          role: "admin",
+        },
+      };
       const newAdmin = await userCollection.updateOne(filter, makeAdmin);
-      res.send(newAdmin)
+      res.send(newAdmin);
+    });
+
+    // get or check admin
+    app.get("/users/admin", async (req, res) => {
+      const email = req.query.email;
+      const query = { userEmail: email };
+      const user = await userCollection.findOne(query);
+      console.log(user.role);
+      let admin = false;
+      if (user) {
+        admin = user?.role === "admin"
+      }
+      res.send({admin})
     })
 
     // make premium
@@ -74,7 +86,6 @@ async function run() {
       res.send(newAdmin);
     });
 
-    
     // get premium member bio data base of age ascending
     app.get("/premium-member", async (req, res) => {
       const sortByAge = req.query.sort;
@@ -83,7 +94,11 @@ async function run() {
       if (sortByAge === "dsc") {
         sortOption = { age: -1 };
       }
-      const bioData = await bioDataCollection.find().sort(sortOption).limit(6).toArray();
+      const bioData = await bioDataCollection
+        .find()
+        .sort(sortOption)
+        .limit(6)
+        .toArray();
       res.send(bioData);
     });
 
@@ -93,7 +108,7 @@ async function run() {
       let query = {};
       if (bioDataType) {
         query.bioDataType = bioDataType;
-      }   
+      }
       const bioData = await bioDataCollection.find(query).toArray();
       res.send(bioData);
     });
@@ -107,17 +122,52 @@ async function run() {
       res.send(biodata);
     });
 
-    // post a biodata 
+    // post a biodata
     app.post("/biodata", async (req, res) => {
       const bioData = req.body;
-      const allBioData = await bioDataCollection.find().sort({ biodataId: -1 }).toArray();
+      // create biodataId
+      const allBioData = await bioDataCollection
+        .find()
+        .sort({ biodataId: -1 })
+        .toArray();
       const lastBioData = allBioData[0]?.biodataId;
       const newBioDataId = lastBioData + 1;
-      const newBioData = { biodataId: newBioDataId, ...bioData }
+      // create a new biodata
+      const newBioData = { biodataId: newBioDataId, ...bioData };
       const result = await bioDataCollection.insertOne(newBioData);
-      res.send({ result, newBioDataId})
-    })
-    
+      res.send({ result, newBioDataId });
+    });
+
+    // edit biodata
+    app.patch("/biodata/:id", async (req, res) => {
+      const id = parseInt(req.params.id);
+      const filter = { biodataId: id };
+      const bioData = req.body;
+      const updateBioData = {
+        $set: {
+          biodataType: bioData.biodataType,
+          name: bioData.name,
+          profileImage: bioData.profileImage,
+          dateOfBirth: bioData.dateOfBirth,
+          height: bioData.height,
+          weight: bioData.weight,
+          age: bioData.age,
+          occupation: bioData.occupation,
+          race: bioData.race,
+          fathersName: bioData.fathersName,
+          mothersName: bioData.mothersName,
+          permanentDivision: bioData.permanentDivision,
+          presentDivision: bioData.presentDivision,
+          expectedPartnerAge: bioData.expectedPartnerAge,
+          expectedPartnerHeight: bioData.expectedPartnerHeight,
+          expectedPartnerWeight: bioData.expectedPartnerWeight,
+          mobile: bioData.mobile,
+        },
+      };
+      const result = await bioDataCollection.updateOne(filter, updateBioData);
+      res.send(result);
+    });
+
     // view profile information by email
     app.get("/viewBiodata", async (req, res) => {
       const email = req.query.email;
@@ -127,21 +177,21 @@ async function run() {
     });
 
     // get favorite biodata for logged in user
-      app.get("/favoriteBiodata", async (req, res) => {
-        const email = req.query.email;
-        const query = { userEmail: email };
-        const biodata = await favoritesBioDataCollection.find(query).toArray()
-        res.send(biodata);
-      });
-
+    app.get("/favoriteBiodata", async (req, res) => {
+      const email = req.query.email;
+      const query = { userEmail: email };
+      const biodata = await favoritesBioDataCollection.find(query).toArray();
+      res.send(biodata);
+    });
 
     // add biodata to the favorite collection
     app.post("/favoriteBiodata", async (req, res) => {
       const biodata = req.body;
-      const newFavoriteBiodata = await favoritesBioDataCollection.insertOne(biodata);
-      res.send(newFavoriteBiodata)
-    })
-
+      const newFavoriteBiodata = await favoritesBioDataCollection.insertOne(
+        biodata
+      );
+      res.send(newFavoriteBiodata);
+    });
 
     // delete favourite biodata
     app.delete("/favoriteBiodata/:id", async (req, res) => {
