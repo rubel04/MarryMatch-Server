@@ -36,7 +36,7 @@ async function run() {
       .collection("favoritesBiodata");
       const userCollection = client.db("marryMatchDB").collection("users");
 
-    // get all users for only admin
+    // get all users for only admin and search user by username
     app.get("/users", async (req, res) => {
       const search = req.query.search;
       let query = {};
@@ -88,7 +88,7 @@ async function run() {
     });
 
     // get all biodatas for biodatas page
-    app.get("/all-biodata", async (req, res) => {
+    app.get("/biodata", async (req, res) => {
       const { bioDataType, division, ageFrom, ageTo } = req.query;
       let query = {};
       if (bioDataType) {
@@ -107,6 +107,17 @@ async function run() {
       res.send(biodata);
     });
 
+    // post a biodata 
+    app.post("/biodata", async (req, res) => {
+      const bioData = req.body;
+      const allBioData = await bioDataCollection.find().sort({ biodataId: -1 }).toArray();
+      const lastBioData = allBioData[0]?.biodataId;
+      const newBioDataId = lastBioData + 1;
+      const newBioData = { biodataId: newBioDataId, ...bioData }
+      const result = await bioDataCollection.insertOne(newBioData);
+      res.send({ result, newBioDataId})
+    })
+    
     // view profile information by email
     app.get("/viewBiodata", async (req, res) => {
       const email = req.query.email;
