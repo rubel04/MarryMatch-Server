@@ -47,6 +47,25 @@ async function run() {
       res.send({token})
     })
 
+        // custom middleware: verify token
+        const verifyToken = (req, res, next) => {
+          // console.log("inside the verify token",req.headers.authorization);
+          if (!req.headers.authorization) {
+            return res.status(401).send({ message: "unauthorized access" });
+          }
+          const token = req.headers.authorization.split(" ")[1];
+          if (!token) {
+            return res.status(401).send({ message: "unauthorized access" });
+          }
+          jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
+            if (err) {
+              return res.status(403).send({ message: "forbidden access" });
+            }
+            req.decoded = decoded;
+            next();
+          });
+        };
+
     // get all users for only admin and search user by username
     app.get("/users", async (req, res) => {
       const search = req.query.search;
