@@ -67,9 +67,10 @@ async function run() {
 
     // custom middleware: verify admin
     const verifyAdmin = async (req, res, next) => {
-      const email = req.decoded.email;
-      const query = { email: email };
+      const email = req.decoded?.email;
+      const query = { userEmail: email };
       const user = await userCollection.findOne(query);
+      console.log(user)
       const isAdmin = user?.role === "admin";
       if (!isAdmin) {
         return res.status(403).send({ message: "forbidden access" });
@@ -78,8 +79,8 @@ async function run() {
     };
 
     // get all users for only admin and search user by username
-    app.get("/users", verifyToken, async (req, res) => {
-      const search = req.query.search;
+    app.get("/users", verifyToken,verifyAdmin, async (req, res) => {
+      const search = req.query?.search;
       let query = {};
       if (search) {
         query = { userName: { $regex: search, $options: "i" } };
@@ -88,8 +89,23 @@ async function run() {
       res.send(users);
     });
 
+    // get or check admin
+    app.get("/users/admin", async (req, res) => {
+      const email = req.query?.email;
+      // if (email !== req.decoded?.email) {
+      //   return res.status(403).send({ message: "unauthorized access" });
+      // }
+      const query = { userEmail: email };
+      const user = await userCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === "admin";
+      }
+      res.send({ admin });
+    });
+
     // make admin
-    app.patch("/users/admin", async (req, res) => {
+    app.patch("/users/admin", verifyToken, verifyAdmin, async (req, res) => {
       const email = req.query.email;
       const filter = { userEmail: email };
       const makeAdmin = {
@@ -99,18 +115,6 @@ async function run() {
       };
       const newAdmin = await userCollection.updateOne(filter, makeAdmin);
       res.send(newAdmin);
-    });
-
-    // get or check admin
-    app.get("/users/admin", async (req, res) => {
-      const email = req.query.email;
-      const query = { userEmail: email };
-      const user = await userCollection.findOne(query);
-      let admin = false;
-      if (user) {
-        admin = user?.role === "admin";
-      }
-      res.send({ admin });
     });
 
     // create a normal user
@@ -127,7 +131,7 @@ async function run() {
     });
 
     // make premium
-    app.patch("/users/premium", async (req, res) => {
+    app.patch("/users/premium", verifyToken, verifyAdmin, async (req, res) => {
       const email = req.query.email;
       const filter = { userEmail: email };
       const makeAdmin = {
@@ -176,7 +180,7 @@ async function run() {
     });
 
     // post a biodata
-    app.post("/biodata", async (req, res) => {
+    app.post("/biodata", verifyToken, async (req, res) => {
       const bioData = req.body;
       // create biodataId
       const allBioData = await bioDataCollection
@@ -192,7 +196,7 @@ async function run() {
     });
 
     // edit biodata
-    app.patch("/biodata/:id", async (req, res) => {
+    app.patch("/biodata/:id", verifyToken, async (req, res) => {
       const id = parseInt(req.params.id);
       const filter = { biodataId: id };
       const bioData = req.body;
@@ -222,7 +226,7 @@ async function run() {
     });
 
     // view profile information by email
-    app.get("/viewBiodata", async (req, res) => {
+    app.get("/viewBiodata", verifyToken, async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
       const biodata = await bioDataCollection.findOne(query);
@@ -230,7 +234,7 @@ async function run() {
     });
 
     // get favorite biodata for logged in user
-    app.get("/favoriteBiodata", async (req, res) => {
+    app.get("/favoriteBiodata", verifyToken, async (req, res) => {
       const email = req.query.email;
       const query = { userEmail: email };
       const biodata = await favoritesBioDataCollection.find(query).toArray();
@@ -238,7 +242,7 @@ async function run() {
     });
 
     // add biodata to the favorite collection
-    app.post("/favoriteBiodata", async (req, res) => {
+    app.post("/favoriteBiodata", verifyToken, async (req, res) => {
       const biodata = req.body;
       const newFavoriteBiodata = await favoritesBioDataCollection.insertOne(
         biodata
@@ -247,7 +251,7 @@ async function run() {
     });
 
     // delete favourite biodata
-    app.delete("/favoriteBiodata/:id", async (req, res) => {
+    app.delete("/favoriteBiodata/:id", verifyToken, async (req, res) => {
       const id = parseInt(req.params.id);
       console.log(id);
       const query = { biodataId: id };
