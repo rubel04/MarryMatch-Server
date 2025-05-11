@@ -104,6 +104,19 @@ async function run() {
       res.send({ admin });
     });
 
+
+    // get or check premium user
+    app.get("/users/premium", async (req, res) => {
+      const email = req.query?.email;
+      const query = { userEmail: email };
+      const user = await userCollection.findOne(query);
+      let premium = false;
+      if (user) {
+        premium = user?.role === "premium";
+      }
+      res.send({ premium });
+    });
+
     // make admin
     app.patch("/users/admin", verifyToken, verifyAdmin, async (req, res) => {
       const email = req.query.email;
