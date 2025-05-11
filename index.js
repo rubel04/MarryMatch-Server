@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { MongoClient, ServerApiVersion } from "mongodb";
 import "dotenv/config";
+import jwt from "jsonwebtoken";
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -35,6 +36,16 @@ async function run() {
       .db("marryMatchDB")
       .collection("favoritesBiodata");
     const userCollection = client.db("marryMatchDB").collection("users");
+
+    // authentication related apis
+    // create jwt method
+    app.post("/jwt", async (req, res) => {
+      const userInfo = req.body;
+      const token = jwt.sign(userInfo, process.env.ACCESS_TOKEN, {
+        expiresIn: '2h'
+      });
+      res.send({token})
+    })
 
     // get all users for only admin and search user by username
     app.get("/users", async (req, res) => {
@@ -76,7 +87,7 @@ async function run() {
     app.post("/users", async (req, res) => {
       const userData = req.body;
       // check user already existing or not existing
-      const query = { userEmail: userData.email };
+      const query = { userEmail: userData.userEmail };
       const user = await userCollection.findOne(query);
       if (user) {
         return res.send({message: "User already exist!"})
