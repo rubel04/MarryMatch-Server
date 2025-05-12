@@ -42,7 +42,7 @@ async function run() {
     const premiumMemberRequestCollection = client
       .db("marryMatchDB")
       .collection("premiumRequest");
-      const paymentCollection = client.db("marryMatchDB").collection("payments");
+    const paymentCollection = client.db("marryMatchDB").collection("payments");
 
     // authentication related apis
     // create jwt method
@@ -238,10 +238,12 @@ async function run() {
       if (sortByAge === "dsc") {
         sortOption = { age: -1 };
       }
-      const query = {role: "premium"}
+      const query = { role: "premium" };
       const premiumMembers = await userCollection.find(query).toArray();
-      const premiumMembersEmail = premiumMembers.map(member => member.userEmail)
-      
+      const premiumMembersEmail = premiumMembers.map(
+        (member) => member.userEmail
+      );
+
       console.log(premiumMembersEmail);
       const bioData = await bioDataCollection
         .find({ email: { $in: premiumMembersEmail } })
@@ -287,7 +289,24 @@ async function run() {
       const bioId = parseInt(id);
       const query = { biodataId: bioId };
       const biodata = await bioDataCollection.findOne(query);
+      // console.log(biodata)
       res.send(biodata);
+    });
+
+    // get similar biodata  for biodata details page
+    app.get("/biodata/similar/:type", async (req, res) => {
+      const type = req.params.type;
+      const currentId = req.query.currentId;
+      const query = {
+        biodataType: type,
+        biodataId: { $ne: parseInt(currentId) },
+      };
+      const similarBiodata = await bioDataCollection
+        .find(query)
+        .limit(3)
+        .toArray();
+      // console.log(similarBiodata);
+      res.send(similarBiodata);
     });
 
     // post a biodata
@@ -416,7 +435,7 @@ async function run() {
       res.send(paymentResult);
     });
 
-    // get payment contact request for logged in user 
+    // get payment contact request for logged in user
     app.get("/payments/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { userEmail: email };
@@ -427,7 +446,7 @@ async function run() {
       res.send(payments);
     });
 
-    // get all payment contact request for admin,,admin can approved 
+    // get all payment contact request for admin,,admin can approved
     app.get("/contact-request", verifyToken, verifyAdmin, async (req, res) => {
       const query = { status: "pending" };
       const payments = await paymentCollection.find(query).toArray();
@@ -435,24 +454,25 @@ async function run() {
     });
 
     // approved contact request : just for admin
-    app.patch("/approved-contact-request", verifyToken, verifyAdmin, async (req, res) => {
-      // const { status } = req.body;
-      const email = req.query?.email;
+    app.patch(
+      "/approved-contact-request",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        // const { status } = req.body;
+        const email = req.query?.email;
 
-      // accept premium user request and update it
-      const filter = { email: email };
-      const updateStatus = {
-        $set: {
-          status: "Approved",
-        },
-      };
-      const result = await paymentCollection.updateOne(
-        filter,
-        updateStatus
-      );
-      res.send(result);
-    })
-
+        // accept premium user request and update it
+        const filter = { email: email };
+        const updateStatus = {
+          $set: {
+            status: "Approved",
+          },
+        };
+        const result = await paymentCollection.updateOne(filter, updateStatus);
+        res.send(result);
+      }
+    );
   } finally {
     // await client.close();
   }
