@@ -244,7 +244,7 @@ async function run() {
         (member) => member.userEmail
       );
 
-      console.log(premiumMembersEmail);
+      // console.log(premiumMembersEmail);
       const bioData = await bioDataCollection
         .find({ email: { $in: premiumMembersEmail } })
         .sort(sortOption)
@@ -399,6 +399,40 @@ async function run() {
       // TODO: get original marriage count from marriage collection
       const marriage = 2;
       res.send({ male, female, marriage });
+    });
+
+    // get admin stats: total biodata,total female biodata, total male biodata, total premium biodata , total revenue;
+    app.get("/admin-stats", verifyToken,verifyAdmin, async (req, res) => {
+      const totalBiodata = await bioDataCollection.countDocuments();
+      const male = await bioDataCollection.countDocuments({
+        biodataType: "Male",
+      });
+      const female = await bioDataCollection.countDocuments({
+        biodataType: "Female",
+      });
+      const query = { role: "premium" };
+      const premiumMembers = await userCollection.find(query).toArray();
+      const premiumMembersEmail = premiumMembers.map(
+        (member) => member.userEmail
+      );
+      const premium = await bioDataCollection.countDocuments({
+        email: { $in: premiumMembersEmail },
+      });
+      const revenueResult = await paymentCollection.aggregate([
+        {
+          $group: {
+            _id: null,
+            price: { $sum: "$price" }
+          }
+        },
+        {
+          $project: { _id:0}
+        }
+      ]).toArray()
+      const revenue = revenueResult[0]?.price
+      // console.log(biodata, male, female, premium, revenue);
+
+      res.send({ totalBiodata, male, female, premium, revenue });
     });
 
     // get all success story from our success members
