@@ -4,6 +4,9 @@ import { MongoClient, ServerApiVersion } from "mongodb";
 import "dotenv/config";
 import jwt from "jsonwebtoken";
 const app = express();
+import Stripe from "stripe";
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEYS);
+// console.log(stripe)
 const port = process.env.PORT || 5000;
 
 // middlewares
@@ -39,6 +42,7 @@ async function run() {
     const premiumMemberRequestCollection = client
       .db("marryMatchDB")
       .collection("premiumRequest");
+      const paymentCollection = client.db("marryMatchDB").collection("payments");
 
     // authentication related apis
     // create jwt method
@@ -162,7 +166,7 @@ async function run() {
         filter,
         updateStatus
       );
-      res.send(result)
+      res.send(result);
       // when status is rejected, return the function
       if (status !== "Approved") {
         return;
@@ -213,13 +217,10 @@ async function run() {
       const query = { email: email };
       const updateStatus = {
         $set: {
-          status: 'Approved',
+          status: "Approved",
         },
       };
-    await premiumMemberRequestCollection.updateOne(
-        query,
-        updateStatus
-      );
+      await premiumMemberRequestCollection.updateOne(query, updateStatus);
       const filter = { userEmail: email };
       const makeAdmin = {
         $set: {
@@ -233,13 +234,17 @@ async function run() {
     // get premium member bio data base of age ascending
     app.get("/premium-member", async (req, res) => {
       const sortByAge = req.query.sort;
-      // console.log(sortByAge);
       let sortOption = { age: 1 };
       if (sortByAge === "dsc") {
         sortOption = { age: -1 };
       }
+      const query = {role: "premium"}
+      const premiumMembers = await userCollection.find(query).toArray();
+      const premiumMembersEmail = premiumMembers.map(member => member.userEmail)
+      
+      console.log(premiumMembersEmail);
       const bioData = await bioDataCollection
-        .find()
+        .find({ email: { $in: premiumMembersEmail } })
         .sort(sortOption)
         .limit(6)
         .toArray();
@@ -368,6 +373,67 @@ async function run() {
         .toArray();
       res.send(story);
     });
+
+    // payment related apis
+    // create payment intent with stripe
+    app.post("/payment-intent", async (req, res) => {
+      const data = req.body;
+      const { price } = data;
+      const amount = parseInt(price * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    // payment operation
+    app.post("/payments", async (req, res) => {
+      const paymentData = req.body;
+      const paymentResult = await paymentCollection.insertOne(paymentData);
+      res.send(paymentResult);
+    });
+
+    // get payment contact request for logged in user 
+    app.get("/payments/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const query = { userEmail: email };
+      if (email !== req.decoded?.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      const payments = await paymentCollection.find(query).toArray();
+      res.send(payments);
+    });
+
+    // get all payment contact request for admin,,admin can approved 
+    app.get("/contact-request", verifyToken, verifyAdmin, async (req, res) => {
+      const query = { status: "pending" };
+      const payments = await paymentCollection.find(query).toArray();
+      res.send(payments);
+    });
+
+    // approved contact request : just for admin
+    app.patch("/approved-contact-request", verifyToken, verifyAdmin, async (req, res) => {
+      // const { status } = req.body;
+      const email = req.query?.email;
+
+      // accept premium user request and update it
+      const filter = { email: email };
+      const updateStatus = {
+        $set: {
+          status: "Approved",
+        },
+      };
+      const result = await paymentCollection.updateOne(
+        filter,
+        updateStatus
+      );
+      res.send(result);
+    })
+
   } finally {
     // await client.close();
   }
