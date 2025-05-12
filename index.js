@@ -124,7 +124,7 @@ async function run() {
     });
 
     // create premium member request by user
-    app.post("/users/make-premium", async (req, res) => {
+    app.post("/users/make-premium", verifyToken, async (req, res) => {
       const userData = req.body;
       console.log(userData.email);
       // check user already existing in premium request collection
@@ -142,7 +142,7 @@ async function run() {
     });
 
     // get premium member request for admin
-    app.get("/users/premium-request", async (req, res) => {
+    app.get("/users/premium-request", verifyToken, async (req, res) => {
       const query = { status: "pending" };
       const request = await premiumMemberRequestCollection
         .find(query)
@@ -151,7 +151,7 @@ async function run() {
     });
 
     // accept request by admin
-    app.patch("/users/premium-request", async (req, res) => {
+    app.patch("/users/premium-request", verifyToken, async (req, res) => {
       const { status } = req.body;
       const email = req.query?.email;
 
@@ -255,15 +255,34 @@ async function run() {
     app.get("/biodata", async (req, res) => {
       const { bioDataType, division, ageFrom, ageTo } = req.query;
       let query = {};
+      // filter by biodata type
       if (bioDataType) {
-        query.bioDataType = bioDataType;
+        query.biodataType = bioDataType;
+      }
+
+      // filter by permanentDivision
+      if (division) {
+        query.permanentDivision = division;
+      }
+
+      // // filter by age
+      if (ageFrom && ageTo) {
+        query.age = {
+          $gte: parseInt(ageFrom),
+          $lte: parseInt(ageTo),
+        };
+      } else if (ageFrom) {
+        query.age = { $gte: parseInt(ageFrom) };
+      } else if (ageTo) {
+        query.age = { $lte: parseInt(ageTo) };
       }
       const bioData = await bioDataCollection.find(query).toArray();
+      console.log(bioData);
       res.send(bioData);
     });
 
     // get single biodata details by id
-    app.get("/biodata/:id", async (req, res) => {
+    app.get("/biodata/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const bioId = parseInt(id);
       const query = { biodataId: bioId };
@@ -376,7 +395,7 @@ async function run() {
 
     // payment related apis
     // create payment intent with stripe
-    app.post("/payment-intent", async (req, res) => {
+    app.post("/payment-intent", verifyToken, async (req, res) => {
       const data = req.body;
       const { price } = data;
       const amount = parseInt(price * 100);
@@ -391,7 +410,7 @@ async function run() {
     });
 
     // payment operation
-    app.post("/payments", async (req, res) => {
+    app.post("/payments", verifyToken, async (req, res) => {
       const paymentData = req.body;
       const paymentResult = await paymentCollection.insertOne(paymentData);
       res.send(paymentResult);
