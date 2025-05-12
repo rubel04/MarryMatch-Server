@@ -36,6 +36,9 @@ async function run() {
       .db("marryMatchDB")
       .collection("favoritesBiodata");
     const userCollection = client.db("marryMatchDB").collection("users");
+    const premiumMemberRequestCollection = client
+      .db("marryMatchDB")
+      .collection("premiumRequest");
 
     // authentication related apis
     // create jwt method
@@ -70,7 +73,7 @@ async function run() {
       const email = req.decoded?.email;
       const query = { userEmail: email };
       const user = await userCollection.findOne(query);
-      console.log(user)
+      console.log(user);
       const isAdmin = user?.role === "admin";
       if (!isAdmin) {
         return res.status(403).send({ message: "forbidden access" });
@@ -79,7 +82,7 @@ async function run() {
     };
 
     // get all users for only admin and search user by username
-    app.get("/users", verifyToken,verifyAdmin, async (req, res) => {
+    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       const search = req.query?.search;
       let query = {};
       if (search) {
@@ -104,7 +107,6 @@ async function run() {
       res.send({ admin });
     });
 
-
     // get or check premium user
     app.get("/users/premium", async (req, res) => {
       const email = req.query?.email;
@@ -115,6 +117,68 @@ async function run() {
         premium = user?.role === "premium";
       }
       res.send({ premium });
+    });
+
+    // create premium member request by user
+    app.post("/users/make-premium", async (req, res) => {
+      const userData = req.body;
+      console.log(userData.email);
+      // check user already existing in premium request collection
+      const query = { email: userData.email };
+      const user = await premiumMemberRequestCollection.findOne(query);
+      if (user) {
+        return res.send({
+          message: "You already submit your premium biodata request!",
+        });
+      }
+      const newRequest = await premiumMemberRequestCollection.insertOne(
+        userData
+      );
+      res.send(newRequest);
+    });
+
+    // get premium member request for admin
+    app.get("/users/premium-request", async (req, res) => {
+      const query = { status: "pending" };
+      const request = await premiumMemberRequestCollection
+        .find(query)
+        .toArray();
+      res.send(request);
+    });
+
+    // accept request by admin
+    app.patch("/users/premium-request", async (req, res) => {
+      const { status } = req.body;
+      const email = req.query?.email;
+
+      // accept premium user request and update it
+      const filter = { email: email };
+      const updateStatus = {
+        $set: {
+          status: status,
+        },
+      };
+      const result = await premiumMemberRequestCollection.updateOne(
+        filter,
+        updateStatus
+      );
+      res.send(result)
+      // when status is rejected, return the function
+      if (status !== "Approved") {
+        return;
+      }
+
+      // update user role from user collection
+      const query = { userEmail: email };
+      const updateRole = {
+        $set: {
+          role: "premium",
+        },
+      };
+      const result2 = await userCollection.updateOne(query, updateRole);
+
+      // console.log(result);
+      res.send(result2);
     });
 
     // make admin
@@ -146,14 +210,24 @@ async function run() {
     // make premium
     app.patch("/users/premium", verifyToken, verifyAdmin, async (req, res) => {
       const email = req.query.email;
+      const query = { email: email };
+      const updateStatus = {
+        $set: {
+          status: 'Approved',
+        },
+      };
+    await premiumMemberRequestCollection.updateOne(
+        query,
+        updateStatus
+      );
       const filter = { userEmail: email };
       const makeAdmin = {
         $set: {
           role: "premium",
         },
       };
-      const newAdmin = await userCollection.updateOne(filter, makeAdmin);
-      res.send(newAdmin);
+      const newPremium = await userCollection.updateOne(filter, makeAdmin);
+      res.send(newPremium);
     });
 
     // get premium member bio data base of age ascending
