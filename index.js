@@ -446,6 +446,14 @@ async function run() {
       res.send(story);
     });
 
+
+    // post a success story by normal user
+    app.post("/success-story", async (req, res) => {
+      const data = req.body;
+      const newStory = await successStoryCollection.insertOne(data);
+      res.send(newStory)
+    });
+
     // payment related apis
     // create payment intent with stripe
     app.post("/payment-intent", verifyToken, async (req, res) => {
