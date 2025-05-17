@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { MongoClient, ServerApiVersion } from "mongodb";
+import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
 import "dotenv/config";
 import jwt from "jsonwebtoken";
 const app = express();
@@ -25,10 +25,10 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.connect();
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
 
     // create bio data collection
     const bioDataCollection = client.db("marryMatchDB").collection("biodatas");
@@ -192,6 +192,19 @@ async function run() {
       const makeAdmin = {
         $set: {
           role: "admin",
+        },
+      };
+      const newAdmin = await userCollection.updateOne(filter, makeAdmin);
+      res.send(newAdmin);
+    });
+
+    // remove admin
+    app.patch("/users/remove-admin", verifyToken, verifyAdmin, async (req, res) => {
+      const email = req.query.email;
+      const filter = { userEmail: email };
+      const makeAdmin = {
+        $set: {
+          role: "user",
         },
       };
       const newAdmin = await userCollection.updateOne(filter, makeAdmin);
@@ -395,14 +408,12 @@ async function run() {
       const femaleQuery = { biodataType: "Female" };
       const male = await bioDataCollection.countDocuments(maleQuery);
       const female = await bioDataCollection.countDocuments(femaleQuery);
-      // const marriage = await bioDataCollection.countDocuments(query);
-      // TODO: get original marriage count from marriage collection
-      const marriage = 2;
+      const marriage = await successStoryCollection.countDocuments();
       res.send({ male, female, marriage });
     });
 
     // get admin stats: total biodata,total female biodata, total male biodata, total premium biodata , total revenue;
-    app.get("/admin-stats", verifyToken,verifyAdmin, async (req, res) => {
+    app.get("/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
       const totalBiodata = await bioDataCollection.countDocuments();
       const male = await bioDataCollection.countDocuments({
         biodataType: "Male",
@@ -418,24 +429,26 @@ async function run() {
       const premium = await bioDataCollection.countDocuments({
         email: { $in: premiumMembersEmail },
       });
-      const revenueResult = await paymentCollection.aggregate([
-        {
-          $group: {
-            _id: null,
-            price: { $sum: "$price" }
-          }
-        },
-        {
-          $project: { _id:0}
-        }
-      ]).toArray()
-      const revenue = revenueResult[0]?.price
+      const revenueResult = await paymentCollection
+        .aggregate([
+          {
+            $group: {
+              _id: null,
+              price: { $sum: "$price" },
+            },
+          },
+          {
+            $project: { _id: 0 },
+          },
+        ])
+        .toArray();
+      const revenue = revenueResult[0]?.price;
       // console.log(biodata, male, female, premium, revenue);
 
       res.send({ totalBiodata, male, female, premium, revenue });
     });
 
-    // get all success story from our success members
+    // get all success story for home page and admin
     app.get("/success-story", async (req, res) => {
       const story = await successStoryCollection
         .find()
@@ -446,12 +459,21 @@ async function run() {
       res.send(story);
     });
 
+    // get details success story for admin
+    app.get("/success-story/:id", async (req, res) => {
+      const id = req.params.id;
+      // console.log(id)
+      const query = { _id: new ObjectId(id) };
+      const story = await successStoryCollection.findOne(query);
+      // console.log(story);
+      res.send(story);
+    });
 
     // post a success story by normal user
     app.post("/success-story", async (req, res) => {
       const data = req.body;
       const newStory = await successStoryCollection.insertOne(data);
-      res.send(newStory)
+      res.send(newStory);
     });
 
     // payment related apis
@@ -492,6 +514,7 @@ async function run() {
     app.get("/contact-request", verifyToken, verifyAdmin, async (req, res) => {
       const query = { status: "pending" };
       const payments = await paymentCollection.find(query).toArray();
+      console.log(payments);
       res.send(payments);
     });
 
