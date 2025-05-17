@@ -525,10 +525,10 @@ async function run() {
       verifyAdmin,
       async (req, res) => {
         // const { status } = req.body;
-        const email = req.query?.email;
+        const id = req.query?.id;
 
         // accept premium user request and update it
-        const filter = { email: email };
+        const filter = { _id: new ObjectId(id) };
         const updateStatus = {
           $set: {
             status: "Approved",
