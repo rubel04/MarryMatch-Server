@@ -395,9 +395,9 @@ async function run() {
 
     // delete favourite biodata
     app.delete("/favoriteBiodata/:id", verifyToken, async (req, res) => {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       console.log(id);
-      const query = { biodataId: id };
+      const query = { _id: new ObjectId(id) };
       const deleteBiodata = await favoritesBioDataCollection.deleteOne(query);
       res.send(deleteBiodata);
     });
