@@ -6,7 +6,6 @@ import jwt from "jsonwebtoken";
 const app = express();
 import Stripe from "stripe";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEYS);
-// console.log(stripe)
 const port = process.env.PORT || 5000;
 
 // middlewares
@@ -77,7 +76,6 @@ async function run() {
       const email = req.decoded?.email;
       const query = { userEmail: email };
       const user = await userCollection.findOne(query);
-      console.log(user);
       const isAdmin = user?.role === "admin";
       if (!isAdmin) {
         return res.status(403).send({ message: "forbidden access" });
@@ -126,7 +124,6 @@ async function run() {
     // create premium member request by user
     app.post("/users/make-premium", verifyToken, async (req, res) => {
       const userData = req.body;
-      console.log(userData.email);
       // check user already existing in premium request collection
       const query = { email: userData.email };
       const user = await premiumMemberRequestCollection.findOne(query);
@@ -181,7 +178,6 @@ async function run() {
       };
       const result2 = await userCollection.updateOne(query, updateRole);
 
-      // console.log(result);
       res.send(result2);
     });
 
@@ -257,7 +253,6 @@ async function run() {
         (member) => member.userEmail
       );
 
-      // console.log(premiumMembersEmail);
       const bioData = await bioDataCollection
         .find({ email: { $in: premiumMembersEmail } })
         .sort(sortOption)
@@ -292,7 +287,6 @@ async function run() {
         query.age = { $lte: parseInt(ageTo) };
       }
       const bioData = await bioDataCollection.find(query).toArray();
-      console.log(bioData);
       res.send(bioData);
     });
 
@@ -302,7 +296,6 @@ async function run() {
       const bioId = parseInt(id);
       const query = { biodataId: bioId };
       const biodata = await bioDataCollection.findOne(query);
-      // console.log(biodata)
       res.send(biodata);
     });
 
@@ -318,7 +311,6 @@ async function run() {
         .find(query)
         .limit(3)
         .toArray();
-      // console.log(similarBiodata);
       res.send(similarBiodata);
     });
 
@@ -396,7 +388,6 @@ async function run() {
     // delete favourite biodata
     app.delete("/favoriteBiodata/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
-      console.log(id);
       const query = { _id: new ObjectId(id) };
       const deleteBiodata = await favoritesBioDataCollection.deleteOne(query);
       res.send(deleteBiodata);
@@ -443,7 +434,6 @@ async function run() {
         ])
         .toArray();
       const revenue = revenueResult[0]?.price;
-      // console.log(biodata, male, female, premium, revenue);
 
       res.send({ totalBiodata, male, female, premium, revenue });
     });
@@ -462,10 +452,8 @@ async function run() {
     // get details success story for admin
     app.get("/success-story/:id", async (req, res) => {
       const id = req.params.id;
-      // console.log(id)
       const query = { _id: new ObjectId(id) };
       const story = await successStoryCollection.findOne(query);
-      // console.log(story);
       res.send(story);
     });
 
@@ -514,7 +502,6 @@ async function run() {
     app.get("/contact-request", verifyToken, verifyAdmin, async (req, res) => {
       const query = { status: "pending" };
       const payments = await paymentCollection.find(query).toArray();
-      console.log(payments);
       res.send(payments);
     });
 
